@@ -2,7 +2,7 @@
 
 A production-grade Retrieval-Augmented Generation (RAG) system designed specifically for Oracle Database Administrators to analyze AWR (Automatic Workload Repository) reports using advanced AI models. Upload multiple AWR reports, ask questions in natural language, and receive intelligent insights with actionable recommendations.
 
-**Live Demo**: [https://oracle-awr-rag-application.streamlit.app/]
+**Live Demo**: https://oracle-awr-rag-application.streamlit.app/
 
 ---
 
