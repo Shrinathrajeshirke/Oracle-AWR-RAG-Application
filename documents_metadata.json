@@ -8,11 +8,18 @@
       "file_size": 7161,
       "ingested_at": "2025-12-14T21:56:22.499689",
       "status": "indexed"
+    },
+    "ebscdb_baseline_report": {
+      "filename": "AWR_Report_DB_ EBSCDB.html",
+      "chunk_count": 568,
+      "file_size": 1360298,
+      "ingested_at": "2026-09-30T11:30:16.164899",
+      "status": "indexed"
     }
   },
   "statistics": {
-    "total_documents": 1,
-    "total_chunks": 3,
-    "total_size_bytes": 7161
+    "total_documents": 2,
+    "total_chunks": 4001,
+    "total_size_bytes": 9529247
   }
 }

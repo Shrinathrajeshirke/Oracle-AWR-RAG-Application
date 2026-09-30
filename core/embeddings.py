@@ -1,88 +1,86 @@
 """
-Embedding initialization and management
-Handles SentenceTransformer and HuggingFace embeddings
+Embedding management using HuggingFace Inference API
 """
 
+import os
 import sys
-from sentence_transformers import SentenceTransformer
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEndpointEmbeddings
 from config.settings import EMBEDDING_MODEL_NAME
 from utils.logger import logging
 from utils.exception import CustomException
 
+# Mapping common model names to their vector sizes
+MODEL_DIMENSIONS = {
+    "sentence-transformers/all-MiniLM-L6-v2": 384,
+    "all-MiniLM-L6-v2": 384,
+    "BAAI/bge-small-en-v1.5": 384,
+    "BAAI/bge-base-en-v1.5": 768,
+    "sentence-transformers/all-mpnet-base-v2": 768,
+}
+
 
 class EmbeddingManager:
     """
-    Manages embedding model initialization and caching
-    Singleton pattern to avoid re-loading models
+    Manages embedding model initialization via HuggingFace Hosted API
     """
-    
     _instance = None
     
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super(EmbeddingManager, cls).__new__(cls)
             cls._instance._initialized = False
         return cls._instance
     
-    def __init__(self):
+    def __init__(self, model_name: str = EMBEDDING_MODEL_NAME):
         if self._initialized:
             return
-        
-        self._initialized = True
-        self.model_name = EMBEDDING_MODEL_NAME
-        self.embeddings = None
-        self.vector_size = None
-        self.model_client = None
-        
-        self._initialize()
-    
-    def _initialize(self):
-        """Initialize embedding models"""
+            
         logging.info("="*50)
-        logging.info("Initializing Embedding Manager")
-        logging.info(f"Embedding model: {self.model_name}")
+        logging.info("Initializing Embedding Manager (HuggingFace API)")
+        logging.info(f"Embedding model: {model_name}")
+        
+        self.model_name = model_name
+        self.hf_token = os.getenv("HUGGINGFACEHUB_API_TOKEN") or os.getenv("HF_TOKEN")
+        
+        if not self.hf_token:
+            raise ValueError(
+                "HUGGINGFACEHUB_API_TOKEN or HF_TOKEN is required in .env for API embeddings."
+            )
+        
+        # Determine vector size for Qdrant collection
+        self.vector_size = MODEL_DIMENSIONS.get(model_name, 384)
         
         try:
-            logging.info("Loading SentenceTransformer model...")
-            self.model_client = SentenceTransformer(self.model_name)
-            self.vector_size = self.model_client.get_sentence_embedding_dimension()
-            logging.info(f"SentenceTransformer loaded. Vector size: {self.vector_size}")
+            # Full Hugging Face repo name format
+            repo_id = (
+                model_name 
+                if "/" in model_name 
+                else f"sentence-transformers/{model_name}"
+            )
+            
+            logging.info(f"Connecting to HuggingFace Inference API endpoint: {repo_id}")
+            self.embeddings = HuggingFaceEndpointEmbeddings(
+                model=repo_id,
+                huggingfacehub_api_token=self.hf_token,
+            )
+            
+            logging.info(f"HuggingFace API embeddings initialized. Dimension: {self.vector_size}")
+            logging.info("="*50)
+            self._initialized = True
             
         except Exception as e:
-            logging.error(f"SentenceTransformer initialization failed: {e}")
+            logging.error(f"Failed to initialize HuggingFace embeddings API: {e}")
             raise CustomException(e, sys)
-        
-        try:
-            logging.info("Initializing HuggingFace embeddings...")
-            self.embeddings = HuggingFaceEmbeddings(model_name=self.model_name)
-            logging.info("HuggingFace embeddings initialized")
             
-        except Exception as e:
-            logging.error(f"HuggingFace embeddings initialization failed: {e}")
-            raise CustomException(e, sys)
-        
-        logging.info("="*50)
-    
-    def get_embeddings(self):
-        """Get the embeddings object for LangChain"""
-        if self.embeddings is None:
-            raise RuntimeError("Embeddings not initialized")
+    def get_embeddings(self) -> HuggingFaceEndpointEmbeddings:
+        """Returns the LangChain embeddings instance"""
         return self.embeddings
-    
-    def get_vector_size(self):
-        """Get the vector dimension size"""
-        if self.vector_size is None:
-            raise RuntimeError("Vector size not initialized")
+        
+    def get_vector_size(self) -> int:
+        """Returns vector dimension size for Qdrant"""
         return self.vector_size
-    
-    def get_model_client(self):
-        """Get the SentenceTransformer model client"""
-        if self.model_client is None:
-            raise RuntimeError("Model client not initialized")
-        return self.model_client
 
 
-def get_embedding_manager():
-    """Factory function to get embedding manager instance"""
-    return EmbeddingManager()
+def get_embedding_manager(model_name: str = EMBEDDING_MODEL_NAME) -> EmbeddingManager:
+    """Singleton getter for EmbeddingManager"""
+    return EmbeddingManager(model_name=model_name)

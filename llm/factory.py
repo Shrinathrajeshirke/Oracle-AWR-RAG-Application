@@ -3,11 +3,11 @@ LLM provider factory
 Creates and manages LLM instances for different providers
 """
 
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_openai import ChatOpenAI
 from langchain_groq import ChatGroq
-from langchain_community.chat_models import ChatHuggingFace
+from langchain_huggingface import ChatHuggingFace
 from huggingface_hub import InferenceClient
-from langchain.chat_models.base import BaseChatModel
 from utils.logger import logging
 
 
@@ -26,21 +26,22 @@ def get_llm(api_choice: str, api_key: str, model_name: str) -> BaseChatModel:
     Raises:
         ValueError: If API key is missing or provider is invalid
     """
-    
     logging.info(f"Initializing LLM: {api_choice}/{model_name}")
     
     if not api_key:
         raise ValueError(f"API key for {api_choice.upper()} is required.")
     
-    if api_choice.lower() == "openai":
+    choice = api_choice.lower()
+    
+    if choice == "openai":
         logging.info("Creating OpenAI chat model")
         return ChatOpenAI(api_key=api_key, model=model_name)
     
-    elif api_choice.lower() == "groq":
+    elif choice == "groq":
         logging.info("Creating Groq chat model")
         return ChatGroq(api_key=api_key, model=model_name)
     
-    elif api_choice.lower() == "huggingface":
+    elif choice == "huggingface":
         logging.info("Creating HuggingFace chat model")
         client = InferenceClient(token=api_key)
         return ChatHuggingFace(inference_client=client, llm=model_name)
@@ -55,7 +56,6 @@ def get_llm(api_choice: str, api_key: str, model_name: str) -> BaseChatModel:
 def get_openai_eval_llm(api_key: str, model_name: str = "gpt-4-turbo-preview") -> BaseChatModel:
     """
     Returns a dedicated ChatOpenAI instance for RAGAS evaluation
-    Uses a powerful model for best evaluation results
     
     Args:
         api_key: OpenAI API key
