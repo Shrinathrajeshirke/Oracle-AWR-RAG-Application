@@ -6,6 +6,7 @@ Handles semantic search and document filtering by ID
 from qdrant_client.models import Filter, FieldCondition, MatchAny
 from config.settings import RETRIEVER_K
 from utils.logger import logging
+from core.hybrid_retriever import HybridRetriever
 
 
 class DocumentRetriever:
@@ -109,7 +110,92 @@ class DocumentRetriever:
                 logging.info(f"  - Content preview: {documents[0].page_content[:200]}")
             
             return documents
-            
+
         except Exception as e:
-            logging.error(f"Document retrieval failed: {e}", exc_info=True)
+                    logging.error(f"Document retrieval failed: {e}", exc_info=True)
+                    raise
+
+    def get_hybrid_retriever(self, doc_ids: list = None, k: int = RETRIEVER_K):
+        """
+        Creates a hybrid retriever using both semantic and BM25 search
+        """
+        from core.hybrid_retriever import HybridRetriever
+        from langchain_core.documents import Document
+    
+        logging.info(f"Creating hybrid retriever for doc_ids: {doc_ids}")
+        
+        try:
+            # Scroll points from Qdrant collection
+            all_points, _ = self.vectorstore_manager.client.scroll(
+                collection_name=self.vectorstore_manager.collection_name,
+                limit=10000,
+                with_payload=True,
+                with_vectors=False
+            )
+            
+            documents = []
+            for point in all_points:
+                payload = point.payload or {}
+                # Support Langchain Qdrant storage conventions
+                content = payload.get("page_content") or payload.get("text", "")
+                metadata = payload.get("metadata", {})
+                
+                # Filter by doc_ids if specified
+                if doc_ids and metadata.get("document_id") not in doc_ids:
+                    continue
+                    
+                if content.strip():
+                    documents.append(Document(page_content=content, metadata=metadata))
+            
+            if not documents:
+                logging.warning("No documents found in collection for BM25 indexing.")
+                
+            return HybridRetriever(documents)
+
+        except Exception as e:
+            logging.error(f"Error creating hybrid retriever: {e}")
             raise
+
+    def retrieve_hybrid(self, query: str, doc_ids: list, k: int = RETRIEVER_K) -> list:
+        """
+        Retrieve documents using hybrid search (semantic + BM25)
+        
+        Args:
+            query: Search query
+            doc_ids: Document IDs to filter by
+            k: Number of documents to retrieve
+        
+        Returns:
+            List of retrieved documents
+        """
+
+        logging.info(f"Hybrid retrieval for query: {query[:100]}...")
+        logging.info(f"Using {len(doc_ids) if doc_ids else 'all'} document(s)")
+        
+        try:
+            # Get semantic search results
+            retriever = self.get_filtered_retriever(doc_ids, k) if doc_ids else self.get_unfiltered_retriever(k)
+            vector_docs = retriever.invoke(query)
+            
+            logging.info(f"Vector search returned {len(vector_docs)} documents")
+            
+            # Get BM25 search results
+            hybrid_ret = self.get_hybrid_retriever(doc_ids, k)
+            bm25_docs = hybrid_ret.bm25_search(query, k)
+            
+            logging.info(f"BM25 search returned {len(bm25_docs)} documents")
+            
+            # Merge results using reciprocal rank fusion
+            final_docs = hybrid_ret.hybrid_search(vector_docs, bm25_docs, k)
+            
+            logging.info(f"Hybrid search returned {len(final_docs)} merged documents")
+            
+            return final_docs
+        
+        except Exception as e:
+            logging.error(f"Hybrid retrieval failed: {e}", exc_info=True)
+            raise
+
+
+                
+            

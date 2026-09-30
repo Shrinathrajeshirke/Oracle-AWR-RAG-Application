@@ -1,4 +1,4 @@
-## vaseline evaluation script
+## tier 1 eval script
 
 import os
 import sys
@@ -23,7 +23,6 @@ from core.retriever import DocumentRetriever
 from llm.factory import get_llm
 from config.prompts import get_system_prompt
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 
 # =====================================================================
@@ -62,7 +61,7 @@ GOLDEN_DATA = {
 
 
 # =====================================================================
-# 2. IN-MEMORY SETUP & PIPELINE INVOCATION
+# 2. IN-MEMORY SETUP & PIPELINE INVOCATION (HYBRID RETRIEVAL)
 # =====================================================================
 def prepare_test_vector_store():
     data_dir = os.path.join(PROJECT_ROOT, "data")
@@ -118,35 +117,27 @@ def get_pipeline_responses(questions: list, vs_manager: VectorStoreManager) -> t
         ("user", "{question}")
     ])
 
-    def format_docs(docs):
-        return "\n---\n".join([doc.page_content for doc in docs])
-
-    rag_chain = (
-        {"context": retriever.get_unfiltered_retriever() | format_docs, "question": RunnablePassthrough()}
-        | prompt 
-        | llm
-        | StrOutputParser()
-    )
+    chain = prompt | llm | StrOutputParser()
 
     for i, q in enumerate(questions, 1):
-        print(f"[{i}/{len(questions)}] Querying: {q[:70]}...")
-        docs = retriever.retrieve_documents(q, [])
+        print(f"[{i}/{len(questions)}] Hybrid Querying: {q[:70]}...")
+        docs = retriever.retrieve_hybrid(q, [], k=5)
         contexts.append([doc.page_content for doc in docs])
 
-        ans = rag_chain.invoke(q)
+        context_text = "\n---\n".join([doc.page_content for doc in docs])
+        ans = chain.invoke({"context": context_text, "question": q})
         answers.append(ans)
 
     return answers, contexts
 
 
 # =====================================================================
-# 3. BASELINE EVALUATION & FORMATTED EXPORT
+# 3. EVALUATION RUNNER & EXPORT
 # =====================================================================
 def save_readable_reports(custom_scores_list: list, mean_scores: dict):
-    """Saves both a clean CSV and a Markdown summary file."""
+    """Saves both a clean CSV and a Markdown summary file for Tier 1 comparison."""
     df = pd.DataFrame(custom_scores_list)
 
-    # Reorder columns for readability
     ordered_cols = [
         "question",
         "overall_quality",
@@ -159,24 +150,23 @@ def save_readable_reports(custom_scores_list: list, mean_scores: dict):
     ]
     df = df[[c for c in ordered_cols if c in df.columns]]
 
-    # 1. Save Clean CSV (replace multi-line breaks so Excel doesn't scramble rows)
+    # 1. Save Clean CSV
     df_clean = df.copy()
     df_clean["answer"] = df_clean["answer"].apply(lambda x: str(x).replace("\r", " ").replace("\n", " ").strip())
     
-    # Round numerical metrics to 4 decimals
     numeric_cols = ["overall_quality", "completeness", "specificity", "structure", "actionability", "relevance"]
     for col in numeric_cols:
         if col in df_clean.columns:
             df_clean[col] = df_clean[col].round(4)
 
-    csv_path = os.path.join(PROJECT_ROOT, "evaluation_scores_tier1.csv")
+    csv_path = os.path.join(PROJECT_ROOT, "tier1_hybrid_evaluation_scores.csv")
     df_clean.to_csv(csv_path, index=False)
-    print(f"\n[Saved] Clean CSV report: {csv_path}")
+    print(f"\n[Saved] Clean Hybrid CSV report: {csv_path}")
 
     # 2. Save Markdown Table Report
-    md_path = os.path.join(PROJECT_ROOT, "evaluation_summary_tier1.md")
+    md_path = os.path.join(PROJECT_ROOT, "tier1_hybrid_evaluation_summary.md")
     with open(md_path, "w", encoding="utf-8") as f:
-        f.write("# AWR RAG Baseline Evaluation Report\n\n")
+        f.write("# Tier 1 Advanced RAG (Hybrid Search) Evaluation Report\n\n")
         f.write("## Aggregate Summary\n\n")
         f.write(f"- **Overall Quality:** `{mean_scores.get('overall_quality', 0.0):.4f}`\n")
         f.write(f"- **Completeness:** `{mean_scores.get('completeness', 0.0):.4f}`\n")
@@ -199,14 +189,14 @@ def save_readable_reports(custom_scores_list: list, mean_scores: dict):
     print(f"[Saved] Markdown summary: {md_path}")
 
 
-def run_baseline_evaluation(export_reports=True) -> dict:
+def run_hybrid_evaluation(export_reports=True) -> dict:
     from evaluation.metrics import CustomMetrics
 
     vs_manager = prepare_test_vector_store()
-    print("\nRunning test queries against the pipeline...")
+    print("\nRunning test queries against the Hybrid pipeline...")
     answers, contexts = get_pipeline_responses(GOLDEN_DATA["question"], vs_manager)
 
-    print("\nCalculating Custom Evaluation metrics...")
+    print("\nCalculating Evaluation metrics...")
     custom_scores_list = []
     for q, ans, context_list in zip(GOLDEN_DATA["question"], answers, contexts):
         scores = CustomMetrics.compute_overall_quality_score(ans, context_list)
@@ -228,12 +218,12 @@ def run_baseline_evaluation(export_reports=True) -> dict:
 
 
 # =====================================================================
-# 4. PYTEST HOOK & STANDALONE EXECUTION
+# 4. PYTEST ENTRYPOINT
 # =====================================================================
 @pytest.mark.evaluation
-def test_rag_baseline_metrics():
-    scores = run_baseline_evaluation(export_reports=True)
-    print("\n--- Baseline Scores ---")
+def test_rag_hybrid_metrics():
+    scores = run_hybrid_evaluation(export_reports=True)
+    print("\n--- Tier 1 Hybrid Scores ---")
     for metric, score in scores.items():
         print(f"{metric.replace('_', ' ').title()}: {score:.4f}")
 
@@ -241,7 +231,7 @@ def test_rag_baseline_metrics():
 
 
 if __name__ == "__main__":
-    scores = run_baseline_evaluation(export_reports=True)
-    print("\n--- Final Aggregate Baseline Scores ---")
+    scores = run_hybrid_evaluation(export_reports=True)
+    print("\n--- Final Aggregate Hybrid Scores ---")
     for metric, score in scores.items():
         print(f"{metric.replace('_', ' ').title()}: {score:.4f}")
