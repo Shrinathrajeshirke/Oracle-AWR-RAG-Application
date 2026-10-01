@@ -1,0 +1,140 @@
+{
+  "summary": {
+    "avg_faithfulness": 52.5,
+    "avg_correctness": 37.5
+  },
+  "details": [
+    {
+      "id": "AWR-01",
+      "question": "What are the Database Name, Instance Name, and Elapsed Time for this AWR report?",
+      "latency": 12.95,
+      "faithfulness": 1.0,
+      "context_relevance": 1.0,
+      "answer_correctness": 1.0,
+      "keyword_recall": 1.0,
+      "answer_preview": "- Database Name: EBSCDB - Instance Name: ebscdb - Elapsed Time: 121.57 minutes...",
+      "reasoning": "The generated answer directly matches the information provided in the retrieved AWR context, with no discrepancies."
+    },
+    {
+      "id": "AWR-02",
+      "question": "What was the total DB Time?",
+      "latency": 6.11,
+      "faithfulness": 0.5,
+      "context_relevance": 0.5,
+      "answer_correctness": 0.0,
+      "keyword_recall": 0.33,
+      "answer_preview": "The total DB Time was 90,086 seconds, as reported in the Time Model Statistics section of ...",
+      "reasoning": "The generated answer claims the total DB Time is 90,086 seconds, which is not directly supported by the retrieved context. The context mentions 90,086 seconds in relation to CPU Time, not DB Time."
+    },
+    {
+      "id": "AWR-03",
+      "question": "What is the Redo size generated per second and per transaction?",
+      "latency": 8.01,
+      "faithfulness": 0.0,
+      "context_relevance": 0.0,
+      "answer_correctness": 0.0,
+      "keyword_recall": 0.0,
+      "answer_preview": "The Redo size generated per second is 87.80 MB, and per transaction, it is 0.37 MB.   Thes...",
+      "reasoning": "The generated answer does not match the ground truth values. The retrieved context does not contain the specific 'Redo size per second' or 'Redo size per transaction' metrics. The values provided in the generated answer are from a different metric ('redo writes adaptive all')."
+    },
+    {
+      "id": "AWR-04",
+      "question": "How many Logical Reads and Physical Reads occurred per second?",
+      "latency": 6.68,
+      "faithfulness": 0.0,
+      "context_relevance": 0.5,
+      "answer_correctness": 0.0,
+      "keyword_recall": 0.0,
+      "answer_preview": "From the `IOStat by Function/Filetype summary` table:  - Logical Reads per second: 18.14 m...",
+      "reasoning": "The generated answer claims logical reads per second as 18.14 million and physical reads per second as 242.31 million, which are not directly supported by the retrieved context. The context does not provide these specific metrics in the 'IOStat by Function/Filetype summary' table."
+    },
+    {
+      "id": "AWR-05",
+      "question": "What were the Buffer Cache Hit Ratio and Library Cache Hit Ratio?",
+      "latency": 9.18,
+      "faithfulness": 1.0,
+      "context_relevance": 1.0,
+      "answer_correctness": 1.0,
+      "keyword_recall": 1.0,
+      "answer_preview": "The Buffer Cache Hit Ratio and Library Cache Hit Ratio were as follows:  1. **Buffer Cache...",
+      "reasoning": "The generated answer accurately reflects the values from the retrieved AWR context: Buffer Hit % is 100.00% and Library Hit % is 100.07%, matching the ground truth."
+    },
+    {
+      "id": "AWR-06",
+      "question": "How many CPUs and Cores does the host system have?",
+      "latency": 6.48,
+      "faithfulness": 1.0,
+      "context_relevance": 1.0,
+      "answer_correctness": 1.0,
+      "keyword_recall": 1.0,
+      "answer_preview": "The host system has 32 CPUs and 16 cores....",
+      "reasoning": "The generated answer directly matches the information provided in the retrieved AWR context, which states the host system has 32 CPUs and 16 cores."
+    },
+    {
+      "id": "AWR-07",
+      "question": "What were the top 3 foreground wait events by total wait time (excluding DB CPU)?",
+      "latency": 6.86,
+      "faithfulness": 0.0,
+      "context_relevance": 0.0,
+      "answer_correctness": 0.0,
+      "keyword_recall": 0.0,
+      "answer_preview": "The top 3 foreground wait events by total wait time (excluding DB CPU) are:  1. Log file s...",
+      "reasoning": "The generated answer includes specific wait events and metrics that are not directly supported by the retrieved AWR context. The context does not provide detailed wait event statistics or specific numbers for 'Log file sync', 'DB CPU', or 'SQL*Net message from client'."
+    },
+    {
+      "id": "AWR-08",
+      "question": "What percentage of total DB time was spent on 'DB CPU'?",
+      "latency": 7.28,
+      "faithfulness": 0.5,
+      "context_relevance": 0.8,
+      "answer_correctness": 0.0,
+      "keyword_recall": 0.0,
+      "answer_preview": "The percentage of total DB time spent on 'DB CPU' can be calculated by referencing the Tim...",
+      "reasoning": "The generated answer correctly identifies the need to reference the Time Model Statistics section for the 'DB CPU' percentage. However, it fails to provide the exact percentage value, which is 77.3% as per the ground truth."
+    },
+    {
+      "id": "AWR-09",
+      "question": "Which Wait Class contributed the most to total wait time after DB CPU, and what was its percentage of DB time?",
+      "latency": 6.24,
+      "faithfulness": 1.0,
+      "context_relevance": 1.0,
+      "answer_correctness": 1.0,
+      "keyword_recall": 1.0,
+      "answer_preview": "The wait class that contributed the most to total wait time after DB CPU is **Concurrency*...",
+      "reasoning": "The generated answer correctly identifies 'Concurrency' as the wait class contributing the most to total wait time after DB CPU, with a percentage of 14.04% of DB time, which matches the data in the 'Foreground Wait Class' section of the AWR context."
+    },
+    {
+      "id": "AWR-10",
+      "question": "Which SQL_ID had the highest Elapsed Time, and what was its total elapsed time?",
+      "latency": 7.06,
+      "faithfulness": 0.0,
+      "context_relevance": 0.0,
+      "answer_correctness": 0.0,
+      "keyword_recall": 0.0,
+      "answer_preview": "The SQL_ID with the highest Elapsed Time can be determined from the \"SQL ordered by Elapse...",
+      "reasoning": "The generated answer does not provide any specific SQL_ID or elapsed time from the retrieved context. It merely states a need to refer to a section that is not present in the provided context."
+    },
+    {
+      "id": "AWR-11",
+      "question": "Identify the top SQL_ID by Buffer Gets. How many gets did it perform?",
+      "latency": 7.47,
+      "faithfulness": 0.5,
+      "context_relevance": 0.8,
+      "answer_correctness": 0.0,
+      "keyword_recall": 0.0,
+      "answer_preview": "The SQL_ID with the highest Buffer Gets is the one that performed the most significant I/O...",
+      "reasoning": "The generated answer correctly identifies the need to look at the 'SQL ordered by Gets' section but fails to provide the specific SQL_ID and Buffer Gets value, which are not present in the retrieved context."
+    },
+    {
+      "id": "AWR-12",
+      "question": "How many executions were there for SQL_ID 0z318y6g3uagc, and what module did it belong to?",
+      "latency": 5.42,
+      "faithfulness": 0.8,
+      "context_relevance": 0.7,
+      "answer_correctness": 0.5,
+      "keyword_recall": 0.5,
+      "answer_preview": "SQL_ID 0z318y6g3uagc had 200 executions. However, the module to which it belonged is not a...",
+      "reasoning": "The answer correctly identifies the number of executions for SQL_ID 0z318y6g3uagc as 200, which is supported by the retrieved context. However, it fails to provide the module information, which is not available in the context."
+    }
+  ]
+}

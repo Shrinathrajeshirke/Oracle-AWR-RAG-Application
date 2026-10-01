@@ -1,0 +1,157 @@
+{
+  "tier": "baseline",
+  "timestamp": "2026-10-01T10:33:37.517426",
+  "total_questions": 12,
+  "metrics": {
+    "avg_faithfulness": 0.1667,
+    "avg_context_relevance": 0.5,
+    "avg_answer_correctness": 0.1667,
+    "overall_score": 0.2778
+  },
+  "detailed_results": [
+    {
+      "question_num": 1,
+      "question": "What are the Database Name, Instance Name, and Elapsed Time for this AWR report?",
+      "ground_truth": "Database Name: EBSCDB, Instance Name: ebscdb, Elapsed Time: 121.57 minutes",
+      "faithfulness_score": 1.0,
+      "faithfulness_reasoning": "The system's answer directly matches the retrieved context, which clearly states the database name, instance name, and elapsed time.",
+      "context_relevance_score": 1.0,
+      "context_relevance_reasoning": "The retrieved context contains the exact information needed to answer the question, including the database name, instance name, and elapsed time.",
+      "answer_correctness_score": 1.0,
+      "answer_correctness_reasoning": "The system's answer matches the ground truth exactly, with the database name as 'EBSCDB', instance name as 'ebscdb', and elapsed time as '121.57 minutes'.",
+      "retrieval_time_sec": 4.86
+    },
+    {
+      "question_num": 2,
+      "question": "What was the total DB Time?",
+      "ground_truth": "9260 seconds or approximately 2.57 hours",
+      "faithfulness_score": 0.0,
+      "faithfulness_reasoning": "The system answer does not provide any claims or values related to the total DB Time. It only repeats sections of the context without addressing the question.",
+      "context_relevance_score": 1.0,
+      "context_relevance_reasoning": "The retrieved context contains the exact information needed to answer the question, specifically the 'DB Time' value of 1,942.31 minutes, which can be converted to seconds to match the ground truth.",
+      "answer_correctness_score": 0.0,
+      "answer_correctness_reasoning": "The system answer does not provide any value for the total DB Time, thus failing to match the ground truth of 9260 seconds or approximately 2.57 hours.",
+      "retrieval_time_sec": 3.08
+    },
+    {
+      "question_num": 3,
+      "question": "What is the Redo size generated per second and per transaction?",
+      "ground_truth": "Redo size per second: 6004534.38 bytes, per transaction: 750.57 KB",
+      "faithfulness_score": 0.0,
+      "faithfulness_reasoning": "The system's answer does not provide any information about redo size per second or per transaction. The values mentioned are unrelated to the question.",
+      "context_relevance_score": 0.0,
+      "context_relevance_reasoning": "The retrieved context does not contain any information about redo size per second or per transaction. It lists various redo-related metrics, but none directly answer the question.",
+      "answer_correctness_score": 0.0,
+      "answer_correctness_reasoning": "The system's answer does not match the ground truth. It fails to provide any values for redo size per second or per transaction, which are the key metrics in the question.",
+      "retrieval_time_sec": 2.97
+    },
+    {
+      "question_num": 4,
+      "question": "How many Logical Reads and Physical Reads occurred per second?",
+      "ground_truth": "Logical Reads: 3474405.5 per second, Physical Reads: 183733.1 per second",
+      "faithfulness_score": 0.0,
+      "faithfulness_reasoning": "The system answer does not provide any specific numbers for Logical Reads or Physical Reads per second, nor does it reference any relevant data from the context.",
+      "context_relevance_score": 0.0,
+      "context_relevance_reasoning": "The retrieved context does not contain any specific metrics or values for Logical Reads or Physical Reads per second, making it irrelevant to the question.",
+      "answer_correctness_score": 0.0,
+      "answer_correctness_reasoning": "The system answer does not provide any numerical values for Logical Reads or Physical Reads per second, thus it cannot be compared to the ground truth.",
+      "retrieval_time_sec": 2.9
+    },
+    {
+      "question_num": 5,
+      "question": "What were the Buffer Cache Hit Ratio and Library Cache Hit Ratio?",
+      "ground_truth": "Buffer Cache Hit Ratio: 94.7%, Library Cache Hit Ratio: 97.2%",
+      "faithfulness_score": 0.0,
+      "faithfulness_reasoning": "The system's answer does not provide any information about the Buffer Cache Hit Ratio or Library Cache Hit Ratio. The claims made are unrelated to the question asked.",
+      "context_relevance_score": 0.0,
+      "context_relevance_reasoning": "The retrieved context does not contain any information about the Buffer Cache Hit Ratio or Library Cache Hit Ratio. It only lists various cache buffer chains and memory components, which are irrelevant to the question.",
+      "answer_correctness_score": 0.0,
+      "answer_correctness_reasoning": "The system's answer does not address the question about the Buffer Cache Hit Ratio and Library Cache Hit Ratio, and therefore does not match the ground truth.",
+      "retrieval_time_sec": 2.45
+    },
+    {
+      "question_num": 6,
+      "question": "How many CPUs and Cores does the host system have?",
+      "ground_truth": "32 CPUs, 16 cores, 1 socket",
+      "faithfulness_score": 1.0,
+      "faithfulness_reasoning": "The system's answer directly reflects the data presented in the 'Host CPU' table from the retrieved context, with no additional unsupported claims.",
+      "context_relevance_score": 1.0,
+      "context_relevance_reasoning": "The retrieved context contains the exact table with the required metrics (CPUs, Cores, Sockets) needed to answer the question.",
+      "answer_correctness_score": 1.0,
+      "answer_correctness_reasoning": "The system's answer of 32 CPUs, 16 cores, and 1 socket matches the ground truth exactly, as both the answer and the context data align perfectly with the reference answer.",
+      "retrieval_time_sec": 3.04
+    },
+    {
+      "question_num": 7,
+      "question": "What were the top 3 foreground wait events by total wait time (excluding DB CPU)?",
+      "ground_truth": "DB CPU (77.3%), Concurrency wait class (15%), IO (5%)",
+      "faithfulness_score": 0.0,
+      "faithfulness_reasoning": "The system answer does not provide any specific claims or data about the top 3 foreground wait events by total wait time. It merely lists sections of the AWR report without extracting or summarizing relevant information.",
+      "context_relevance_score": 0.5,
+      "context_relevance_reasoning": "The retrieved context includes sections like 'Foreground Wait Class' and 'Foreground Wait Events', which are relevant to the question. However, it does not explicitly contain the specific data needed to answer the question directly.",
+      "answer_correctness_score": 0.0,
+      "answer_correctness_reasoning": "The system answer does not provide any specific information about the top 3 foreground wait events, thus it does not match the ground truth answer at all.",
+      "retrieval_time_sec": 2.66
+    },
+    {
+      "question_num": 8,
+      "question": "What percentage of total DB time was spent on 'DB CPU'?",
+      "ground_truth": "77.3% of total DB time was spent on DB CPU",
+      "faithfulness_score": 0.0,
+      "faithfulness_reasoning": "The system answer does not provide any specific percentage or value related to 'DB CPU' time. It only repeats parts of the context without addressing the question directly.",
+      "context_relevance_score": 0.5,
+      "context_relevance_reasoning": "The context contains information about CPU time as a percentage of elapsed time and total CPU time, but it does not explicitly state the percentage of total DB time spent on 'DB CPU'.",
+      "answer_correctness_score": 0.0,
+      "answer_correctness_reasoning": "The system answer does not provide a percentage or any numerical value, thus it does not match the ground truth of 77.3%.",
+      "retrieval_time_sec": 2.46
+    },
+    {
+      "question_num": 9,
+      "question": "Which Wait Class contributed the most to total wait time after DB CPU, and what was its percentage of DB time?",
+      "ground_truth": "Concurrency wait class with 15% of DB time",
+      "faithfulness_score": 0.0,
+      "faithfulness_reasoning": "The system answer does not provide any specific claims or data regarding the wait class contributing the most to total wait time after DB CPU. It merely repeats the context without extracting relevant information.",
+      "context_relevance_score": 0.5,
+      "context_relevance_reasoning": "The retrieved context includes sections like 'Foreground Wait Class' and 'Service Wait Class Stats' which could potentially contain the needed information, but the specific data about 'Concurrency wait class with 15% of DB time' is not explicitly present.",
+      "answer_correctness_score": 0.0,
+      "answer_correctness_reasoning": "The system answer does not provide any specific wait class or percentage of DB time, thus it does not match the ground truth which specifies 'Concurrency wait class with 15% of DB time.'",
+      "retrieval_time_sec": 3.08
+    },
+    {
+      "question_num": 10,
+      "question": "Which SQL_ID had the highest Elapsed Time, and what was its total elapsed time?",
+      "ground_truth": "SQL_ID 4y08a52989vfk with 18,234 seconds elapsed time",
+      "faithfulness_score": 0.0,
+      "faithfulness_reasoning": "The system's answer does not directly address the question about SQL_ID with the highest elapsed time. It provides a list of metrics without specifying the SQL_ID or its elapsed time.",
+      "context_relevance_score": 0.5,
+      "context_relevance_reasoning": "The context contains metrics related to elapsed time, but it does not explicitly list SQL_IDs or their corresponding elapsed times, making it partially relevant.",
+      "answer_correctness_score": 0.0,
+      "answer_correctness_reasoning": "The system's answer does not match the ground truth. It fails to identify SQL_ID 4y08a52989vfk or its elapsed time of 18,234 seconds.",
+      "retrieval_time_sec": 2.65
+    },
+    {
+      "question_num": 11,
+      "question": "Identify the top SQL_ID by Buffer Gets. How many gets did it perform?",
+      "ground_truth": "SQL_ID 3z9q8m2v1k0wl with 52,456,789 buffer gets",
+      "faithfulness_score": 0.0,
+      "faithfulness_reasoning": "The system answer does not provide any specific SQL_ID or buffer gets value, making it impossible to verify against the context.",
+      "context_relevance_score": 1.0,
+      "context_relevance_reasoning": "The retrieved context contains a detailed table of SQL statements ordered by buffer gets, which is directly relevant to identifying the top SQL_ID by buffer gets.",
+      "answer_correctness_score": 0.0,
+      "answer_correctness_reasoning": "The system answer does not provide any specific SQL_ID or buffer gets value, failing to match the ground truth of SQL_ID 3z9q8m2v1k0wl with 52,456,789 buffer gets.",
+      "retrieval_time_sec": 3.1
+    },
+    {
+      "question_num": 12,
+      "question": "How many executions were there for SQL_ID 0z318y6g3uagc, and what module did it belong to?",
+      "ground_truth": "20,001 executions, module: ebs application",
+      "faithfulness_score": 0.0,
+      "faithfulness_reasoning": "The system's answer does not provide any specific claims about the number of executions or the module for SQL_ID 0z318y6g3uagc. It lists various metrics unrelated to the question.",
+      "context_relevance_score": 0.0,
+      "context_relevance_reasoning": "The retrieved context does not contain any information about SQL_ID 0z318y6g3uagc, nor does it mention the number of executions or the module associated with it.",
+      "answer_correctness_score": 0.0,
+      "answer_correctness_reasoning": "The system's answer does not address the question about SQL_ID 0z318y6g3uagc, hence it does not match the ground truth of 20,001 executions and module 'ebs application.'",
+      "retrieval_time_sec": 3.56
+    }
+  ]
+}

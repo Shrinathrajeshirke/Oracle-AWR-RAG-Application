@@ -1,111 +1,135 @@
 """
-Document chunk processing and preparation
-Handles document loading, splitting, and metadata management
+Document Processor with Table-Structure Preservation, Section Header Inheritance, and Header Pinning
 """
 
-import sys
 import os
-from langchain_community.document_loaders import BSHTMLLoader, TextLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+import re
+from typing import List
+from bs4 import BeautifulSoup
 from langchain_core.documents import Document
-from config.settings import CHUNK_SIZE, CHUNK_OVERLAP
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from utils.logger import logging
-from utils.exception import CustomException
 
 
 class DocumentProcessor:
-    """
-    Handles document loading and chunk processing
-    Splits documents into chunks with proper metadata
-    """
-    
-    def __init__(self):
-        """Initialize document processor with text splitter"""
+    def __init__(self, chunk_size: int = 2500, chunk_overlap: int = 400):
+        self.chunk_size = chunk_size
+        self.chunk_overlap = chunk_overlap
         self.text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=CHUNK_SIZE,
-            chunk_overlap=CHUNK_OVERLAP
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+            separators=["\n\n### ", "\n\n## ", "\n\n", "\n", " ", ""]
         )
-        logging.info("DocumentProcessor initialized")
-    
-    def load_and_split_document(self, file_path: str, doc_id: str, filename: str) -> list[Document]:
-        """
-        Loads a document from a file path, adds metadata, and splits into chunks
-        """
-        logging.info("="*60)
-        logging.info("LOADING AND PROCESSING DOCUMENT")
-        logging.info(f"File: {filename}")
-        logging.info(f"Document ID: {doc_id}")
-        logging.info(f"File path: {file_path}")
-        
-        try:
-            if not os.path.exists(file_path):
-                raise FileNotFoundError(f"File not found: {file_path}")
-            
-            # Select loader based on file extension
-            if file_path.lower().endswith((".html", ".htm")):
-                logging.info("Loading HTML document using BSHTMLLoader...")
-                loader = BSHTMLLoader(file_path, open_encoding="utf-8")
-            else:
-                logging.info("Loading text document using TextLoader...")
-                loader = TextLoader(file_path, encoding="utf-8")
+        logging.info("DocumentProcessor initialized with 2500/400 Table-Aware Chunking")
 
-            documents = loader.load()
-            
-            if not documents:
-                raise ValueError(f"No content loaded from {filename}")
-            
-            logging.info(f"Loaded {len(documents)} document(s) from file")
-            
-        except Exception as e:
-            logging.error(f"Document loading failed: {e}")
-            logging.info("="*60)
-            raise CustomException(e, sys)
-        
-        logging.info("Adding metadata to documents...")
-        for doc in documents:
-            doc.metadata['document_id'] = doc_id
-            doc.metadata['filename'] = filename
-            doc.metadata['source_path'] = file_path
-        
-        logging.info(f"Splitting document into chunks (size={CHUNK_SIZE}, overlap={CHUNK_OVERLAP})...")
-        chunks = self.text_splitter.split_documents(documents)
-        
-        logging.info(f"Split into {len(chunks)} chunks")
-        logging.info("="*60)
-        return chunks
-    
-    def process_multiple_documents(self, file_info_list: list) -> dict:
-        results = {"successful": [], "failed": []}
-        for file_info in file_info_list:
-            try:
-                chunks = self.load_and_split_document(
-                    file_path=file_info['file_path'],
-                    doc_id=file_info['doc_id'],
-                    filename=file_info['filename']
+    def _html_table_to_markdown(self, table_soup) -> str:
+        """Converts an HTML <table> into Markdown, preserving parent section headings."""
+        # Find preceding heading if available
+        heading = ""
+        prev = table_soup.find_previous(["h2", "h3", "h4", "a"])
+        if prev:
+            h_text = prev.get_text(strip=True)
+            if h_text and len(h_text) > 3 and not h_text.lower().startswith("back to"):
+                heading = f"\n### Table Section: {h_text}\n"
+
+        rows = table_soup.find_all("tr")
+        if not rows:
+            return ""
+
+        grid = []
+        for row in rows:
+            cells = row.find_all(["th", "td"])
+            cell_texts = [
+                re.sub(r"\s+", " ", cell.get_text(strip=True)).replace("|", "/")
+                for cell in cells
+            ]
+            if any(cell_texts):
+                grid.append(cell_texts)
+
+        if not grid:
+            return ""
+
+        max_cols = max(len(r) for r in grid)
+        for r in grid:
+            while len(r) < max_cols:
+                r.append("")
+
+        header = grid[0]
+        separator = ["---"] * max_cols
+        data_rows = grid[1:] if len(grid) > 1 else []
+
+        md_lines = [
+            "| " + " | ".join(header) + " |",
+            "| " + " | ".join(separator) + " |"
+        ]
+        for r in data_rows:
+            md_lines.append("| " + " | ".join(r) + " |")
+
+        return heading + "\n" + "\n".join(md_lines) + "\n"
+
+    def _extract_header_summary(self, soup: BeautifulSoup) -> str:
+        """Extracts the top-level AWR report metadata header."""
+        header_lines = []
+        for table in soup.find_all("table")[:4]:
+            text = table.get_text(" ", strip=True)
+            if any(k in text for k in ["DB Name", "Database", "Instance", "Elapsed", "CPUs", "Cores", "Host"]):
+                header_lines.append(self._html_table_to_markdown(table))
+
+        if not header_lines:
+            header_lines.append(soup.get_text()[:1500])
+
+        summary = (
+            "### AWR REPORT SYSTEM & DATABASE HEADER METADATA (PINNED)\n"
+            + "\n".join(header_lines)
+        )
+        return summary
+
+    def load_and_split_document(self, file_path: str, doc_id: str, filename: str) -> List[Document]:
+        logging.info(f"Loading and processing document with table structure: {filename}")
+
+        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+            html_content = f.read()
+
+        soup = BeautifulSoup(html_content, "html.parser")
+
+        # 1. Pinned Header Chunk (Chunk 0)
+        header_text = self._extract_header_summary(soup)
+        header_doc = Document(
+            page_content=header_text,
+            metadata={
+                "document_id": doc_id,
+                "filename": filename,
+                "chunk_id": 0,
+                "is_header": True,
+                "section": "awr_header_metadata"
+            }
+        )
+
+        # 2. In-place conversion of HTML tables to Markdown with section tagging
+        for table in soup.find_all("table"):
+            md_table = self._html_table_to_markdown(table)
+            table.replace_with(soup.new_string(f"\n\n{md_table}\n\n"))
+
+        clean_text = soup.get_text()
+        clean_text = re.sub(r"\n{3,}", "\n\n", clean_text)
+
+        # 3. Split remaining content with expanded boundaries
+        text_chunks = self.text_splitter.split_text(clean_text)
+        documents = [header_doc]
+
+        for idx, chunk in enumerate(text_chunks, start=1):
+            documents.append(
+                Document(
+                    page_content=chunk,
+                    metadata={
+                        "document_id": doc_id,
+                        "filename": filename,
+                        "chunk_id": idx,
+                        "is_header": False,
+                        "section": "report_body"
+                    }
                 )
-                results["successful"].append({
-                    "doc_id": file_info['doc_id'],
-                    "filename": file_info['filename'],
-                    "chunk_count": len(chunks),
-                    "chunks": chunks
-                })
-            except Exception as e:
-                logging.error(f"Failed to process {file_info['filename']}: {e}")
-                results["failed"].append({
-                    "doc_id": file_info['doc_id'],
-                    "filename": file_info['filename'],
-                    "error": str(e)
-                })
-        return results
-    
-    def validate_chunks(self, chunks: list[Document]) -> bool:
-        if not chunks:
-            return False
-        required_fields = ['document_id', 'filename', 'source_path']
-        for i, chunk in enumerate(chunks):
-            for field in required_fields:
-                if field not in chunk.metadata:
-                    return False
-            if not chunk.page_content or len(chunk.page_content.strip()) == 0:
-                return False
-        return True
+            )
+
+        logging.info(f"Processed {filename}: created 1 pinned header chunk + {len(documents)-1} body chunks")
+        return documents

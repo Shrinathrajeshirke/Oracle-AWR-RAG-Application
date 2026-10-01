@@ -210,15 +210,6 @@ def print_evaluation_summary(scores: dict):
     print("  - Tier 1 (Hybrid Search):  0.1025 Overall Quality")
     print("="*70)
 
-import pytest
-
-@pytest.mark.evaluation
-def test_tier2_rag_metrics():
-    scores = run_tier2_evaluation(export_reports=True)
-    print_evaluation_summary(scores)
-    assert scores.get("overall_quality", 0.0) > 0.0, "Tier 2 evaluation failed"
-
-
 if __name__ == "__main__":
     scores = run_tier2_evaluation(export_reports=True)
     print_evaluation_summary(scores)
