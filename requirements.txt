@@ -6,6 +6,7 @@ langchain-community
 langchain-openai
 qdrant-client
 langchain-qdrant
+langchain-huggingface
 sentence-transformers
 rank-bm25
 beautifulsoup4
