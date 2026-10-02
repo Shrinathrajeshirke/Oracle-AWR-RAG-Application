@@ -1,19 +1,18 @@
 """
 Query interface UI component
-Handles query configuration and execution
+Handles query configuration and Tier 1 Hybrid RAG execution
 """
 
 import streamlit as st
 from config.settings import MODEL_CHOICES
 from config.prompts import get_system_prompt
-from core.vector_store import VectorStoreManager
 from core.retriever import DocumentRetriever
-from llm.factory import get_llm, get_openai_eval_llm
-from evaluation.ragas_evaluator import RAGASEvaluator
-from evaluation.metrics import CustomMetrics
+from llm.factory import get_llm
 from reporting.report_builder import ReportBuilder
 from ui.session_manager import SessionManager
 from utils.logger import logging
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
 
 
 def render_query_section():
@@ -70,12 +69,14 @@ def render_query_section():
     user_query = st.text_area(
         "Ask your question or request a comparison",
         height=100,
-        placeholder="e.g., 'Analyze this AWR report and identify performance issues'"
+        placeholder="e.g., 'What were the top 3 foreground wait events by total wait time (excluding DB CPU)?'"
     )
     
     st.markdown("---")
     
-    # Analysis Style
+    # Engine & Style Configuration
+    st.caption("⚡ **Active Engine:** Tier 1 Hybrid Search (BM25 Keyword + Dense Semantic Vector, k=6)")
+    
     col_style1, col_style2 = st.columns([2, 1])
     
     with col_style1:
@@ -89,32 +90,11 @@ def render_query_section():
     with col_style2:
         st.markdown("#### Style Guide")
         if prompt_style == "Standard":
-            st.info("📝 Balanced analysis with clear structure")
+            st.info("📝 Balanced analysis with direct tabular extraction")
         elif prompt_style == "Detailed Step-by-Step":
             st.info("🔍 Deep dive with reasoning at each step")
         elif prompt_style == "Issue-Focused":
             st.info("🎯 Executive summary with prioritized issues")
-    
-    st.markdown("---")
-    
-    # RAGAS Evaluation Toggle
-    col_ragas1, col_ragas2 = st.columns([3, 1])
-    
-    with col_ragas1:
-        ragas_enabled = st.toggle(
-            "📊 Enable Background Quality Evaluation (RAGAS)",
-            value=True,
-            help="Evaluates answer quality in background. Scores are logged for internal tracking."
-        )
-    
-    with col_ragas2:
-        if ragas_enabled:
-            st.success("✅ Active")
-        else:
-            st.info("⏸️ Disabled")
-    
-    if ragas_enabled:
-        st.caption("ℹ️ Quality metrics will be logged for internal analysis. No impact on response time.")
     
     st.markdown("---")
     
@@ -144,9 +124,9 @@ def render_query_section():
         st.info(f"📨 Report will be sent to: {recipient_email} as {report_format.upper()}")
     
     # Run Query Button
-    if st.button("🚀 Run RAG Query", type="primary", use_container_width=True):
+    if st.button("🚀 Run RAG Query (Tier 1 Hybrid)", type="primary", use_container_width=True):
         if not api_key or not model_name or not user_query:
-            st.error("⚠️ Please ensure API key, model name and query are filled out.")
+            st.error("⚠️ Please ensure API key, model name, and query are provided.")
         else:
             execute_query(
                 query=user_query,
@@ -155,7 +135,6 @@ def render_query_section():
                 api_key=api_key,
                 model_name=model_name,
                 prompt_style=prompt_style,
-                ragas_enabled=ragas_enabled,
                 recipient_email=recipient_email if recipient_email else "",
                 report_format=report_format if recipient_email else "pdf"
             )
@@ -164,132 +143,93 @@ def render_query_section():
 
 
 def execute_query(query, doc_ids, api_choice, api_key, model_name, prompt_style,
-                  ragas_enabled, recipient_email, report_format):
-    """Execute RAG query"""
+                  recipient_email, report_format):
+    """Execute Tier 1 Hybrid RAG query"""
     
     try:
-        with st.spinner(f"Running query with {api_choice.upper()}..."):
-            # Get vector store and retriever
+        with st.spinner(f"Running Tier 1 Hybrid Query with {api_choice.upper()}..."):
+            # 1. Initialize Vector Store & Base Retriever
             vs_manager = SessionManager.get_vector_store_manager()
+            if not vs_manager:
+                st.error("❌ Vector store is not available. Please re-index documents.")
+                return
+                
             retriever = DocumentRetriever(vs_manager)
             
-            # Retrieve documents
-            docs = retriever.retrieve_documents(query, doc_ids)
+            # 2. Tier 1 Hybrid Retrieval (BM25 Keyword + Dense Vector, k=6)
+            logging.info(f"Executing Tier 1 Hybrid search for query: '{query}' across docs: {doc_ids}")
+            docs = retriever.retrieve_hybrid(query=query, doc_ids=doc_ids, k=6)
             
             if not docs:
                 st.warning("⚠️ No relevant documents found. Try refining your query.")
                 return
             
+            # 3. Format Context Chunks
             contexts = [doc.page_content for doc in docs]
+            context_str = "\n\n---\n\n".join([
+                f"[Document ID: {doc.metadata.get('document_id', 'Unknown')} | Chunk: {doc.metadata.get('chunk_id', 0)}]\n"
+                f"{doc.page_content}"
+                for doc in docs
+            ])
             
-            # Get LLM
+            # 4. Initialize LLM & Prompt
+            system_prompt = get_system_prompt(doc_ids, prompt_style)
             llm = get_llm(api_choice, api_key, model_name)
             
-            # Get system prompt
-            system_prompt = get_system_prompt(doc_ids, prompt_style)
-            
-            # Build and execute RAG chain
-            from langchain_core.prompts import ChatPromptTemplate
-            from langchain_core.runnables import RunnablePassthrough
-            from langchain_core.output_parsers import StrOutputParser
-            
+            # 5. Build and execute Chain
             prompt = ChatPromptTemplate.from_messages([
-                ("system", system_prompt + "\n\nContext: {context}"),
+                ("system", system_prompt + "\n\nRetrieved Context:\n{context}"),
                 ("user", "{question}")
             ])
             
-            def format_docs(docs):
-                return "\n---\n".join([
-                    f"Document ID: {doc.metadata.get('document_id', 'Unknown')}\n"
-                    f"Filename: {doc.metadata.get('filename', 'Unknown')}\n"
-                    f"Content: {doc.page_content}"
-                    for doc in docs
-                ])
+            chain = prompt | llm | StrOutputParser()
+            answer = chain.invoke({"context": context_str, "question": query})
             
-            rag_chain = (
-                {"context": retriever.get_filtered_retriever(doc_ids) | format_docs, "question": RunnablePassthrough()}
-                | prompt
-                | llm
-                | StrOutputParser()
-            )
-            
-            answer = rag_chain.invoke(query)
-            
-            # Store results
+            # 6. Store in Session
             results = {
                 "answer": answer,
                 "contexts": contexts,
+                "docs": docs,
                 "retrieved_docs_count": len(docs),
+                "engine": "Tier 1: Hybrid BM25 + Dense",
                 "error": False
             }
-            
             SessionManager.store_query_results(results)
         
-        # Display results
-        display_query_results(results, ragas_enabled, api_key, recipient_email, report_format, query)
+        # Display Results
+        display_query_results(results, recipient_email, report_format, query)
         
     except Exception as e:
         st.error(f"Query execution failed: {e}")
         logging.error(f"Query failed: {e}")
 
 
-def display_query_results(results, ragas_enabled, api_key, recipient_email, report_format, query):
-    """Display query results"""
+def display_query_results(results, recipient_email, report_format, query):
+    """Display query results and inspect retrieved context chunks"""
     
     st.markdown("---")
     st.markdown("### 🤖 RAG Answer")
     
     answer = results.get("answer", "")
     contexts = results.get("contexts", [])
+    docs = results.get("docs", [])
     
-    st.success("Query successful!")
-    st.markdown(f"**Answer:**\n{answer}")
+    st.success("✅ Query executed successfully via Tier 1 Hybrid!")
+    st.markdown(f"**Answer:**\n\n{answer}")
     
-    st.caption(f"📚 Retrieved {results.get('retrieved_docs_count', 0)} relevant chunks")
+    st.caption(f"📚 Context composed from {results.get('retrieved_docs_count', 0)} chunks (BM25 Keyword + Dense Vector)")
     
-    # RAGAS Evaluation
-    if ragas_enabled and api_key:
-        with st.spinner("📊 Running quality evaluation..."):
-            try:
-                evaluator = RAGASEvaluator()
-                eval_llm = get_openai_eval_llm(api_key)
-                
-                ragas_scores = evaluator.evaluate_response(
-                    question=query,
-                    answer=answer,
-                    contexts=contexts,
-                    llm=eval_llm
-                )
-                
-                if ragas_scores and "error" not in ragas_scores:
-                    col1, col2, col3, col4 = st.columns(4)
-                    with col1:
-                        st.metric("Faithfulness", f"{ragas_scores.get('faithfulness', 0):.2f}")
-                    with col2:
-                        st.metric("Answer Relevancy", f"{ragas_scores.get('answer_relevancy', 0):.2f}")
-                    with col3:
-                        st.metric("Context Precision", f"{ragas_scores.get('context_precision', 0):.2f}")
-                    with col4:
-                        st.metric("Context Recall", f"{ragas_scores.get('context_recall', 0):.2f}")
-                    
-                    SessionManager.store_evaluation_results(ragas_scores)
-            
-            except Exception as e:
-                st.warning(f"⚠️ Evaluation failed: {e}")
-    
-    # Custom Metrics
-    if contexts:
-        custom_scores = CustomMetrics.compute_overall_quality_score(answer, contexts)
-        with st.expander("📊 Custom Quality Metrics"):
-            col1, col2 = st.columns(2)
-            with col1:
-                st.metric("Completeness", f"{custom_scores.get('completeness', 0):.2%}")
-                st.metric("Specificity", f"{custom_scores.get('specificity', 0):.2%}")
-            with col2:
-                st.metric("Actionability", f"{custom_scores.get('actionability', 0):.2%}")
-                st.metric("Overall Quality", f"{custom_scores.get('overall_quality', 0):.2%}")
-    
-    # Email Report
+    # Expandable Context Transparency Inspector
+    if docs:
+        with st.expander("🔍 View Retrieved Context Chunks (Markdown Tables & Metadata)"):
+            for idx, doc in enumerate(docs, 1):
+                meta = doc.metadata
+                is_pinned = "📌 Pinned Header (Chunk 0)" if meta.get("is_header") or meta.get("chunk_id") == 0 else f"Chunk #{meta.get('chunk_id', idx)}"
+                st.markdown(f"**Source {idx}: Document `{meta.get('document_id', 'Unknown')}` ({is_pinned})**")
+                st.markdown(doc.page_content)
+                st.divider()
+
+    # Optional Email Delivery
     if recipient_email:
         with st.spinner(f"Generating {report_format.upper()} report and sending email..."):
             try:
@@ -305,7 +245,7 @@ def display_query_results(results, ragas_enabled, api_key, recipient_email, repo
                 if success:
                     st.success(f"✅ Report sent successfully to {recipient_email} as {report_format.upper()}!")
                 else:
-                    st.warning(f"⚠️ Email sending failed. Please check SMTP configuration.")
+                    st.warning("⚠️ Email sending failed. Please check SMTP configuration.")
             
             except Exception as e:
                 st.error(f"Error generating/sending report: {e}")

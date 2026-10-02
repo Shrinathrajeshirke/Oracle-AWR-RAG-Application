@@ -1,1 +1,0 @@
-from config.settings import CHUNK_SIZE, CHUNK_OVERLAP

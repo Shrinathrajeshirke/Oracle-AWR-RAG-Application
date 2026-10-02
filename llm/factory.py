@@ -1,74 +1,28 @@
 """
 LLM provider factory
-Creates and manages LLM instances for different providers
+Creates and manages deterministic ChatOpenAI instances for gpt-4o-mini.
 """
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_openai import ChatOpenAI
-from langchain_groq import ChatGroq
-from langchain_huggingface import ChatHuggingFace
-from huggingface_hub import InferenceClient
 from utils.logger import logging
 
 
-def get_llm(api_choice: str, api_key: str, model_name: str) -> BaseChatModel:
+def get_llm(api_choice: str, api_key: str, model_name: str = "gpt-4o-mini") -> BaseChatModel:
     """
-    Returns the appropriate LangChain chat model instance based on provider choice
-    
-    Args:
-        api_choice: LLM provider ("openai", "groq", or "huggingface")
-        api_key: API key for the provider
-        model_name: Model name to use
-    
-    Returns:
-        BaseChatModel: Initialized LLM instance
-    
-    Raises:
-        ValueError: If API key is missing or provider is invalid
+    Returns a strictly deterministic ChatOpenAI instance configured with zero temperature.
     """
-    logging.info(f"Initializing LLM: {api_choice}/{model_name}")
-    
     if not api_key:
         raise ValueError(f"API key for {api_choice.upper()} is required.")
-    
+
     choice = api_choice.lower()
-    
     if choice == "openai":
-        logging.info("Creating OpenAI chat model")
-        return ChatOpenAI(api_key=api_key, model=model_name)
-    
-    elif choice == "groq":
-        logging.info("Creating Groq chat model")
-        return ChatGroq(api_key=api_key, model=model_name)
-    
-    elif choice == "huggingface":
-        logging.info("Creating HuggingFace chat model")
-        client = InferenceClient(token=api_key)
-        return ChatHuggingFace(inference_client=client, llm=model_name)
-    
-    else:
-        raise ValueError(
-            f"Invalid API choice: {api_choice}. "
-            "Must be 'openai', 'groq', or 'huggingface'"
+        logging.info(f"Initializing deterministic ChatOpenAI ({model_name}) with temperature=0.0, top_p=0.01")
+        return ChatOpenAI(
+            api_key=api_key,
+            model=model_name,
+            temperature=0.0,
+            model_kwargs={"top_p": 0.01}
         )
 
-
-def get_openai_eval_llm(api_key: str, model_name: str = "gpt-4-turbo-preview") -> BaseChatModel:
-    """
-    Returns a dedicated ChatOpenAI instance for RAGAS evaluation
-    
-    Args:
-        api_key: OpenAI API key
-        model_name: Model to use for evaluation (default: gpt-4-turbo-preview)
-    
-    Returns:
-        BaseChatModel: OpenAI chat model for evaluation
-    
-    Raises:
-        ValueError: If API key is missing
-    """
-    if not api_key:
-        raise ValueError("OpenAI API key for RAGAS evaluation is required.")
-    
-    logging.info(f"Creating OpenAI evaluation LLM: {model_name}")
-    return ChatOpenAI(api_key=api_key, model=model_name)
+    raise ValueError(f"Invalid API choice: {api_choice}. Only 'openai' is supported.")

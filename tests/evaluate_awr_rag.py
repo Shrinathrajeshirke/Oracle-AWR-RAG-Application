@@ -147,7 +147,7 @@ Provide structured evaluation with scores and brief reasoning for each dimension
 # =====================================================================
 # SETUP PIPELINE
 # =====================================================================
-def setup_pipeline(tier: str = "tier2") -> Tuple[Any, Any, Any]:
+def setup_pipeline(tier: str = "tier1") -> Tuple[Any, Any, Any]:
     logging.info(f"Setting up pipeline for tier: {tier}")
     
     data_files = glob.glob(os.path.join(PROJECT_ROOT, "data", "*.html"))
@@ -166,7 +166,8 @@ def setup_pipeline(tier: str = "tier2") -> Tuple[Any, Any, Any]:
     base_retriever = DocumentRetriever(vs_manager)
     tier2_retriever = Tier2Retriever(base_retriever)
     
-    llm = get_llm("openai", os.getenv("OPENAI_API_KEY"), "gpt-3.5-turbo-0125")
+    # Locked to gpt-4o-mini
+    llm = get_llm("openai", os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
     return tier2_retriever, base_retriever, llm
 
 # =====================================================================
@@ -177,9 +178,10 @@ def retrieve_by_tier(question: str, tier: str, tier2_retriever: Tier2Retriever, 
         docs, _ = tier2_retriever.retrieve_and_rerank(question, [], use_classification=True)
         return docs
     elif tier == "tier1":
-        return base_retriever.retrieve_hybrid(question, [], k=6)
+        # k=10 to allow multi-column SQL and wait event tables to fit in context
+        return base_retriever.retrieve_hybrid(question, [], k=10)
     else:  # baseline
-        return base_retriever.retrieve_documents(question, [], k=6)
+        return base_retriever.retrieve_documents(question, [], k=10)
 
 # =====================================================================
 # LLM JUDGE EVALUATION
@@ -202,13 +204,14 @@ def run_llm_judge(question: str, ground_truth: str, context: str, answer: str) -
 # =====================================================================
 # BENCHMARK RUNNER
 # =====================================================================
-def run_benchmark(tier: str = "tier2"):
+def run_benchmark(tier: str = "tier1"):
     print(f"\n{'='*80}")
     print(f"  TIER {tier.upper()} - LLM-AS-A-JUDGE EVALUATION ({len(GOLDEN_SCENARIOS)} Questions)")
     print(f"{'='*80}\n")
     
     tier2_retriever, base_retriever, llm = setup_pipeline(tier)
-    base_prompt = get_system_prompt(["all"], "Standard")
+    # Using the single-argument signature for get_system_prompt
+    base_prompt = get_system_prompt(["ebscdb_baseline_report"])
     
     results = []
     
@@ -307,9 +310,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "tier",
         nargs="?",
-        default="tier2",
+        default="tier1",
         choices=["baseline", "tier1", "tier2"],
-        help="Which tier to evaluate (default: tier2)"
+        help="Which tier to evaluate (default: tier1)"
     )
     args = parser.parse_args()
     run_benchmark(args.tier)

@@ -15,11 +15,18 @@
       "file_size": 1360298,
       "ingested_at": "2026-09-30T15:52:04.538901",
       "status": "indexed"
+    },
+    "8497bf82": {
+      "filename": "AWR_Report_DB_ EBSCDB.html",
+      "chunk_count": 290,
+      "file_size": 1360298,
+      "ingested_at": "2026-10-01T19:40:41.235214",
+      "status": "indexed"
     }
   },
   "statistics": {
-    "total_documents": 2,
-    "total_chunks": 5137,
-    "total_size_bytes": 12249843
+    "total_documents": 3,
+    "total_chunks": 5427,
+    "total_size_bytes": 13610141
   }
 }
