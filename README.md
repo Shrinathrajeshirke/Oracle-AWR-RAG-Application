@@ -4,7 +4,7 @@ A production-grade, hallucination-resistant Retrieval-Augmented Generation (RAG)
 
 Upload raw AWR HTML/TXT reports, receive immediate executive health diagnoses, and run interactive follow-up investigations with verifiable, zero-hallucination metric extraction.
 
-🔗 **Live Demo**: [oracle-awr-rag-application.streamlit.app](https://awr-copilot.streamlit.app/)
+🔗 **Live Demo**: [awr-copilot.streamlit.app](https://awr-copilot.streamlit.app/)
 
 ---
 
